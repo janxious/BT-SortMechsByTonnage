@@ -1,0 +1,18 @@
+﻿{
+  "Name": "SortByTonnage",
+  "Enabled": true,
+
+  "Version": "0.0.2",
+
+  "Author": "janxious",
+  "Website": "https://github.com/janxious/SortByTonnage",
+
+  "DLL": "SortByTonnage.dll",
+  "DLLEntryPoint": "SortByTonnage.SortByTonnage.Init",
+  "DependsOn": [],
+  "ConflictsWith": [],
+
+  "Settings": {
+    "debug": true
+  }
+}
