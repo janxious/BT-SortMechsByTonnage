@@ -100,8 +100,7 @@ namespace SortByTonnage
                 else if (readying.ContainsKey(i))
                 {
                     Logger.Debug($"found readying {i}");
-                    combined[i] = new Tuple<MechState, MechDef>(MechState.Active, readying[i]);
-                    ;
+                    combined[i] = new Tuple<MechState, MechDef>(MechState.Readying, readying[i]);
                 }
             }
 
@@ -113,12 +112,12 @@ namespace SortByTonnage
             Dictionary<int, MechDef> readyingMechs)
         {
             var sortedMechs = SortMechDefs(CombinedSlots(mechSlots, activeMechs, readyingMechs));
-            Logger.Debug($"sortedMechswtf: {sortedMechs.Count}");
-            for (var ii = 0; ii < sortedMechs.Count; ii++)
-            {
-                Logger.Debug(
-                    $"mech: {sortedMechs[ii].Item2.Chassis.VariantName}\nreadying? {sortedMechs[ii].Item1 == MechState.Readying}\nactive? {sortedMechs[ii].Item1 == MechState.Active}");
-            }
+//            Logger.Debug($"sortedMechswtf: {sortedMechs.Count}");
+//            for (var ii = 0; ii < sortedMechs.Count; ii++)
+//            {
+//                Logger.Debug(
+//                    $"mech: {sortedMechs[ii].Item2.Chassis.VariantName}\nreadying? {sortedMechs[ii].Item1 == MechState.Readying}\nactive? {sortedMechs[ii].Item1 == MechState.Active}");
+//            }
 
             for (var i = 0; i <= mechSlots; i++)
             {
@@ -234,6 +233,7 @@ namespace SortByTonnage
     {
         static bool Prefix(WorkOrderEntry_ReadyMech order, SimGameState __instance)
         {
+            Logger.Debug("ML_ReadyMech Patch Installed");
             if (order.IsMechLabComplete)
             {
                 return false;
@@ -254,7 +254,21 @@ namespace SortByTonnage
     {
         static bool Prefix(WorkOrderEntry_ReadyMech order, SimGameState __instance)
         {
+            Logger.Debug("ML_Cancel_ReadyMech Patch Installed");
+            Logger.Debug($"count? {__instance.ReadyingMechs.Count}");
+            Logger.Debug($"count? {__instance.ActiveMechs.Count}");
+            if (order.IsMechLabComplete)
+            {
+                Logger.Debug("wtf is happning");
+                return false;
+            }
+            foreach (var instanceReadyingMech in __instance.ReadyingMechs)
+            {
+                Logger.Debug($"key: {instanceReadyingMech.Key}\nval: {instanceReadyingMech.Value.GUID} | {instanceReadyingMech.Value.Chassis.VariantName}");
+            }
+            Logger.Debug("what the shit");
             var index = __instance.ReadyingMechs.First(item => item.Value == order.Mech).Key;
+            Logger.Debug($"cancel index: {index}\nmech? {order.Mech.GUID} : {order.Mech.Chassis.VariantName}");
             __instance.UnreadyMech(index, order.Mech);
             __instance.ReadyingMechs.Remove(index);
             SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
@@ -267,6 +281,7 @@ namespace SortByTonnage
     {
         static void Postfix(MechLabPanel __instance)
         {
+            Logger.Debug("DoConfirmRefit Patch Installed");
             var simulation = UnityGameInstance.BattleTechGame.Simulation;
             SortMechsByTonnage(simulation.GetMaxActiveMechs(), simulation.ActiveMechs, simulation.ReadyingMechs);
         }
