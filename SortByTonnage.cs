@@ -29,7 +29,7 @@ namespace SortByTonnage
                 ModSettings = new Settings();
             }
 
-            var harmony = HarmonyInstance.Create("com.joelmeador.SortByTonnage");
+            var harmony = HarmonyInstance.Create(Settings.ModId);
             harmony.PatchAll(Assembly.GetExecutingAssembly());
         }
 
@@ -318,14 +318,13 @@ namespace SortByTonnage
     }
 
     [HarmonyPatch(typeof(MechBayPanel), "OnMechLabClosed")]
-    public static class COMEON
+    public static class MechBayPanel_OnMechLabClosed_Patch
     {
         static void Prefix(MechBayPanel __instance)
         {
             Logger.Debug("OnMechLabClosed Patch Installed");
             if (!__instance.IsSimGame)
             {
-                Logger.Debug("wut");
                 return;
             }
             SortMechsByTonnage(__instance.Sim.GetMaxActiveMechs(), __instance.Sim.ActiveMechs, __instance.Sim.ReadyingMechs);

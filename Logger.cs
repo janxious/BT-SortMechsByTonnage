@@ -4,12 +4,13 @@ using static SortByTonnage.SortByTonnage;
 
 namespace SortByTonnage
 {
-    public class Logger
+    public static class Logger
     {
+        private static string LogFilePath => $"{ModDirectory}/{Settings.ModName}.log";
+
         public static void Error(Exception ex)
         {
-            var filePath = $"{ModDirectory}/SortByTonnage.log";
-            using (var writer = new StreamWriter(filePath, true))
+            using (var writer = new StreamWriter(LogFilePath, true))
             {
                 writer.WriteLine($"Message: {ex.Message}");
                 writer.WriteLine($"StackTrace: {ex.StackTrace}");
@@ -20,8 +21,7 @@ namespace SortByTonnage
         public static void Debug(String line)
         {
             if (!ModSettings.debug) return;
-            var filePath = $"{ModDirectory}/SortByTonnage.log";
-            using (var writer = new StreamWriter(filePath, true))
+            using (var writer = new StreamWriter(LogFilePath, true))
             {
                 writer.WriteLine(line);
                 WriteLogFooter(writer);
