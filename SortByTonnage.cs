@@ -237,7 +237,7 @@ namespace SortByTonnage
     [HarmonyPatch(typeof(SimGameState), "ScrapInactiveMech")]
     public static class SimGameState_ScrapInativeMech_Patch
     {
-        static void Postfix(int baySlot, MechDef def, SimGameState __instance)
+        static void Postfix(string id, bool pay, SimGameState __instance)
         {
             Logger.Debug("ScrapInctiveMech Patch Installed");
             SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
@@ -285,26 +285,20 @@ namespace SortByTonnage
         }
     }
 
-    [HarmonyPatch(typeof(SimGameState), "Cancel_ML_ReadyMech")]
+    [HarmonyPatch(typeof(SimGameState), "Cancel_ML_ReadyMech", new Type[] { typeof(WorkOrderEntry_ReadyMech) })]
     public static class SimGamestate_Cancel_ML_ReadyMech_Patch
     {
         static bool Prefix(WorkOrderEntry_ReadyMech order, SimGameState __instance)
         {
             Logger.Debug("ML_Cancel_ReadyMech Patch Installed");
-            Logger.Debug($"count? {__instance.ReadyingMechs.Count}");
-            Logger.Debug($"count? {__instance.ActiveMechs.Count}");
             if (order.IsMechLabComplete)
             {
-                Logger.Debug("wtf is happning");
+                Logger.Debug("wtf is happening how");
                 return false;
             }
-            foreach (var instanceReadyingMech in __instance.ReadyingMechs)
-            {
-                Logger.Debug($"key: {instanceReadyingMech.Key}\nval: {instanceReadyingMech.Value.GUID} | {instanceReadyingMech.Value.Chassis.VariantName}");
-            }
-            Logger.Debug("what the shit");
-            var index = __instance.ReadyingMechs.First(item => item.Value == order.Mech).Key;
-            Logger.Debug($"cancel index: {index}\nmech? {order.Mech.GUID} : {order.Mech.Chassis.VariantName}");
+            var item = __instance.ReadyingMechs.First(readying => readying.Value == order.Mech);
+            var index = item.Key;
+            Logger.Debug($"cancel index: {index}\nmech? {item.Value.GUID} : {order.Mech.GUID} : {order.Mech.Chassis.VariantName}");
             __instance.UnreadyMech(index, order.Mech);
             __instance.ReadyingMechs.Remove(index);
             SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
