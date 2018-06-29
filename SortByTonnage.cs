@@ -112,12 +112,12 @@ namespace SortByTonnage
             Dictionary<int, MechDef> readyingMechs)
         {
             var sortedMechs = SortMechDefs(CombinedSlots(mechSlots, activeMechs, readyingMechs));
-//            Logger.Debug($"sortedMechswtf: {sortedMechs.Count}");
-//            for (var ii = 0; ii < sortedMechs.Count; ii++)
-//            {
-//                Logger.Debug(
-//                    $"mech: {sortedMechs[ii].Item2.Chassis.VariantName}\nreadying? {sortedMechs[ii].Item1 == MechState.Readying}\nactive? {sortedMechs[ii].Item1 == MechState.Active}");
-//            }
+            Logger.Debug($"sortedMechs #: {sortedMechs.Count}");
+            for (var ii = 0; ii < sortedMechs.Count; ii++)
+            {
+                Logger.Debug(
+                    $"mech: {sortedMechs[ii].Item2.Chassis.VariantName}\nreadying? {sortedMechs[ii].Item1 == MechState.Readying}\nactive? {sortedMechs[ii].Item1 == MechState.Active}");
+            }
 
             for (var i = 0; i <= mechSlots; i++)
             {
@@ -160,10 +160,46 @@ namespace SortByTonnage
     [HarmonyPatch(typeof(SimGameState), "AddMech")]
     public static class SimGameState_AddMech_Patch
     {
+        static bool Prefix(int idx, MechDef mech, bool active, bool forcePlacement, bool displayMechPopup,
+            string mechAddedHeader, SimGameState __instance)
+        {
+            Logger.Debug("AddMech Prefix Patch Installed");
+            if (displayMechPopup)
+            {
+                if (string.IsNullOrEmpty(mech.GUID))
+                {
+                    mech.SetGuid(__instance.GenerateSimGameUID());
+                }
+                var companyStats = Traverse.Create(__instance).Field("companyStats").GetValue<StatCollection>();
+                companyStats.ModifyStat<int>("Mission", 0, "COMPANY_MechsAdded", StatCollection.StatOperation.Int_Add, 1, -1, true);
+                if (string.IsNullOrEmpty(mechAddedHeader))
+                {
+                    mechAddedHeader = "'Mech Chassis Complete";
+                    int num = (int) WwiseManager.PostEvent<AudioEventList_ui>(AudioEventList_ui.ui_sim_popup_newChassis, WwiseManager.GlobalAudioObject, (AkCallbackManager.EventCallback) null, (object) null);
+                }
+                mechAddedHeader += ": {0}";
+                
+                __instance.GetInterruptQueue().QueuePauseNotification(string.Format(mechAddedHeader, (object) mech.Description.UIName), mech.Chassis.YangsThoughts, __instance.GetCrewPortrait(SimGameCrew.Crew_Yang), "notification_mechreadycomplete", (Action) (() =>
+                {
+                    int firstFreeMechBay = __instance.GetFirstFreeMechBay();
+                    if (firstFreeMechBay >= 0)
+                    {
+                        __instance.ActiveMechs[firstFreeMechBay] = mech;
+                        SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
+                    }
+                    else
+                        __instance.CreateMechPlacementPopup(mech);
+                    
+                }), "Continue", (Action) null, (string) null);
+                return false;
+            }
+            return true;
+        }
+
         static void Postfix(int idx, MechDef mech, bool active, bool forcePlacement, bool displayMechPopup,
             string mechAddedHeader, SimGameState __instance)
         {
-            Logger.Debug("AddMech Patch Installed");
+            Logger.Debug("AddMech Postfix Patch Installed");
             SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
         }
     }
@@ -198,12 +234,12 @@ namespace SortByTonnage
         }
     }
 
-    [HarmonyPatch(typeof(SimGameState), "ScrapActiveMech")]
+    [HarmonyPatch(typeof(SimGameState), "ScrapInactiveMech")]
     public static class SimGameState_ScrapInativeMech_Patch
     {
         static void Postfix(int baySlot, MechDef def, SimGameState __instance)
         {
-            Logger.Debug("ScrapActiveMech Patch Installed");
+            Logger.Debug("ScrapInctiveMech Patch Installed");
             SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
         }
     }
