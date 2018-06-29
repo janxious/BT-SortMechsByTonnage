@@ -1,8 +1,8 @@
-{
+﻿{
   "Name": "SortByTonnage",
   "Enabled": true,
 
-  "Version": "0.1.0",
+  "Version": "0.2.0",
 
   "Author": "janxious",
   "Website": "https://github.com/janxious/SortByTonnage",
@@ -14,6 +14,7 @@
 
   "Settings": {
     "debug": false,
-    "orderByCbillValue": false
+    "orderByCbillValue": false,
+    "orderByNickname": false
   }
 }

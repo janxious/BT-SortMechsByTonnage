@@ -65,6 +65,16 @@ namespace SortByTonnage
 
         internal static List<Tuple<MechState, MechDef>> SortMechDefs(Dictionary<int, Tuple<MechState, MechDef>> mechs)
         {
+            if (ModSettings.OrderByNickname)
+            {
+                return
+                    mechs
+                        .Values
+                        .OrderBy(mech => mech.Item2.Name)
+                        .ThenBy(mech => mech.Item2.Chassis.Tonnage)
+                        .ThenBy(mech => mech.Item2.Chassis.VariantName).ToList();
+            }
+
             if (ModSettings.OrderByCbillValue)
             {
                 return
@@ -74,15 +84,12 @@ namespace SortByTonnage
                         .ThenBy(mech => mech.Item2.Chassis.Tonnage)
                         .ThenBy(mech => mech.Item2.Chassis.VariantName).ToList();
             }
-            else
-            {
-                return
-                    mechs
-                        .Values
-                        .OrderByDescending(mech => mech.Item2.Chassis.Tonnage)
-                        .ThenBy(mech => mech.Item2.Chassis.VariantName).ToList();
-            }
 
+            return
+                mechs
+                    .Values
+                    .OrderByDescending(mech => mech.Item2.Chassis.Tonnage)
+                    .ThenBy(mech => mech.Item2.Chassis.VariantName).ToList();
         }
 
         public static Dictionary<int, Tuple<MechState, MechDef>> CombinedSlots(int mechSlots,
@@ -115,15 +122,13 @@ namespace SortByTonnage
             Logger.Debug($"sortedMechs #: {sortedMechs.Count}");
             for (var ii = 0; ii < sortedMechs.Count; ii++)
             {
-                Logger.Debug(
-                    $"mech: {sortedMechs[ii].Item2.Chassis.VariantName}\nreadying? {sortedMechs[ii].Item1 == MechState.Readying}\nactive? {sortedMechs[ii].Item1 == MechState.Active}");
+                Logger.Debug($"mech: {sortedMechs[ii].Item2.Name} / {sortedMechs[ii].Item2.Chassis.VariantName}\nreadying? {sortedMechs[ii].Item1 == MechState.Readying}\nactive? {sortedMechs[ii].Item1 == MechState.Active}");
             }
 
             for (var i = 0; i <= mechSlots; i++)
             {
                 if (i < sortedMechs.Count)
                 {
-
                     if (activeMechs.ContainsKey(i))
                     {
                         activeMechs.Remove(i);
@@ -170,6 +175,7 @@ namespace SortByTonnage
                 {
                     mech.SetGuid(__instance.GenerateSimGameUID());
                 }
+
                 var companyStats = Traverse.Create(__instance).Field("companyStats").GetValue<StatCollection>();
                 companyStats.ModifyStat<int>("Mission", 0, "COMPANY_MechsAdded", StatCollection.StatOperation.Int_Add, 1, -1, true);
                 if (string.IsNullOrEmpty(mechAddedHeader))
@@ -177,22 +183,26 @@ namespace SortByTonnage
                     mechAddedHeader = "'Mech Chassis Complete";
                     int num = (int) WwiseManager.PostEvent<AudioEventList_ui>(AudioEventList_ui.ui_sim_popup_newChassis, WwiseManager.GlobalAudioObject, (AkCallbackManager.EventCallback) null, (object) null);
                 }
+
                 mechAddedHeader += ": {0}";
-                
-                __instance.GetInterruptQueue().QueuePauseNotification(string.Format(mechAddedHeader, (object) mech.Description.UIName), mech.Chassis.YangsThoughts, __instance.GetCrewPortrait(SimGameCrew.Crew_Yang), "notification_mechreadycomplete", (Action) (() =>
-                {
-                    int firstFreeMechBay = __instance.GetFirstFreeMechBay();
-                    if (firstFreeMechBay >= 0)
+
+                __instance.GetInterruptQueue().QueuePauseNotification(
+                    string.Format(mechAddedHeader, (object) mech.Description.UIName), mech.Chassis.YangsThoughts,
+                    __instance.GetCrewPortrait(SimGameCrew.Crew_Yang), "notification_mechreadycomplete", (Action) (() =>
                     {
-                        __instance.ActiveMechs[firstFreeMechBay] = mech;
-                        SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
-                    }
-                    else
-                        __instance.CreateMechPlacementPopup(mech);
-                    
-                }), "Continue", (Action) null, (string) null);
+                        int firstFreeMechBay = __instance.GetFirstFreeMechBay();
+                        if (firstFreeMechBay >= 0)
+                        {
+                            __instance.ActiveMechs[firstFreeMechBay] = mech;
+                            SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs,
+                                __instance.ReadyingMechs);
+                        }
+                        else
+                            __instance.CreateMechPlacementPopup(mech);
+                    }), "Continue", (Action) null, (string) null);
                 return false;
             }
+
             return true;
         }
 
@@ -285,7 +295,7 @@ namespace SortByTonnage
         }
     }
 
-    [HarmonyPatch(typeof(SimGameState), "Cancel_ML_ReadyMech", new Type[] { typeof(WorkOrderEntry_ReadyMech) })]
+    [HarmonyPatch(typeof(SimGameState), "Cancel_ML_ReadyMech", new Type[] {typeof(WorkOrderEntry_ReadyMech)})]
     public static class SimGamestate_Cancel_ML_ReadyMech_Patch
     {
         static bool Prefix(WorkOrderEntry_ReadyMech order, SimGameState __instance)
@@ -296,6 +306,7 @@ namespace SortByTonnage
                 Logger.Debug("wtf is happening how");
                 return false;
             }
+
             var item = __instance.ReadyingMechs.First(readying => readying.Value == order.Mech);
             var index = item.Key;
             Logger.Debug($"cancel index: {index}\nmech? {item.Value.GUID} : {order.Mech.GUID} : {order.Mech.Chassis.VariantName}");
@@ -306,14 +317,18 @@ namespace SortByTonnage
         }
     }
 
-    [HarmonyPatch(typeof(MechLabPanel), "DoConfirmRefit")]
-    public static class MechLabPanel_DoConfirmRefit_Patch
+    [HarmonyPatch(typeof(MechBayPanel), "OnMechLabClosed")]
+    public static class COMEON
     {
-        static void Postfix(MechLabPanel __instance)
+        static void Prefix(MechBayPanel __instance)
         {
-            Logger.Debug("DoConfirmRefit Patch Installed");
-            var simulation = UnityGameInstance.BattleTechGame.Simulation;
-            SortMechsByTonnage(simulation.GetMaxActiveMechs(), simulation.ActiveMechs, simulation.ReadyingMechs);
+            Logger.Debug("OnMechLabClosed Patch Installed");
+            if (!__instance.IsSimGame)
+            {
+                Logger.Debug("wut");
+                return;
+            }
+            SortMechsByTonnage(__instance.Sim.GetMaxActiveMechs(), __instance.Sim.ActiveMechs, __instance.Sim.ReadyingMechs);
         }
     }
 }
