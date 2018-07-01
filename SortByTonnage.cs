@@ -72,7 +72,8 @@ namespace SortByTonnage
                         .Values
                         .OrderBy(mech => mech.Item2.Name)
                         .ThenBy(mech => mech.Item2.Chassis.Tonnage)
-                        .ThenBy(mech => mech.Item2.Chassis.VariantName).ToList();
+                        .ThenBy(mech => mech.Item2.Chassis.VariantName)
+                        .ToList();
             }
 
             if (ModSettings.OrderByCbillValue)
@@ -82,14 +83,18 @@ namespace SortByTonnage
                         .Values
                         .OrderByDescending(mech => CalculateCBillValue(mech.Item2))
                         .ThenBy(mech => mech.Item2.Chassis.Tonnage)
-                        .ThenBy(mech => mech.Item2.Chassis.VariantName).ToList();
+                        .ThenBy(mech => mech.Item2.Chassis.VariantName)
+                        .ThenBy(mech => mech.Item2.Name)
+                        .ToList();
             }
 
             return
                 mechs
                     .Values
                     .OrderByDescending(mech => mech.Item2.Chassis.Tonnage)
-                    .ThenBy(mech => mech.Item2.Chassis.VariantName).ToList();
+                    .ThenBy(mech => mech.Item2.Chassis.VariantName)
+                    .ThenBy(mech => mech.Item2.Name)
+                    .ToList();
         }
 
         public static Dictionary<int, Tuple<MechState, MechDef>> CombinedSlots(int mechSlots,
@@ -193,7 +198,7 @@ namespace SortByTonnage
                         int firstFreeMechBay = __instance.GetFirstFreeMechBay();
                         if (firstFreeMechBay >= 0)
                         {
-                            __instance.ActiveMechs[firstFreeMechBay] = mech;
+                            __instance.ActiveMechs[firstFreeMechBay] = mech;    
                             SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs,
                                 __instance.ReadyingMechs);
                         }

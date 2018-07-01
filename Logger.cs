@@ -31,7 +31,7 @@ namespace SortByTonnage
         private static void WriteLogFooter(StreamWriter writer)
         {
             writer.WriteLine($"Date: {DateTime.Now}");
-            writer.WriteLine(new string(c: '-', count: 50));
+            writer.WriteLine(new string(c: '-', count: 80));
         }
     }
 }
