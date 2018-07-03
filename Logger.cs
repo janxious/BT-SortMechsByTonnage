@@ -1,12 +1,11 @@
 ﻿using System;
 using System.IO;
-using static SortByTonnage.SortByTonnage;
 
 namespace SortByTonnage
 {
     public static class Logger
     {
-        private static string LogFilePath => $"{ModDirectory}/{Settings.ModName}.log";
+        private static readonly string LogFilePath = $"{SortByTonnage.ModDirectory}/{SortByTonnage.ModName}.log";
 
         public static void Error(Exception ex)
         {
@@ -20,7 +19,7 @@ namespace SortByTonnage
 
         public static void Debug(String line)
         {
-            if (!ModSettings.debug) return;
+            if (!SortByTonnage.ModSettings.debug) return;
             using (var writer = new StreamWriter(LogFilePath, true))
             {
                 writer.WriteLine(line);

@@ -9,10 +9,15 @@ using Newtonsoft.Json;
 using UnityEngine;
 using static SortByTonnage.SortByTonnage;
 
+// TODO: Deal with MechPlacementPopup's bay management.
+
 namespace SortByTonnage
 {
     public static class SortByTonnage
     {
+        public const string ModName = "SortByTonnage";
+        private const string ModId  = "com.joelmeador.SortByTonnage";
+
         internal static Settings ModSettings = new Settings();
         internal static string ModDirectory;
 
@@ -29,42 +34,49 @@ namespace SortByTonnage
                 ModSettings = new Settings();
             }
 
-            var harmony = HarmonyInstance.Create(Settings.ModId);
+            var harmony = HarmonyInstance.Create(ModId);
             harmony.PatchAll(Assembly.GetExecutingAssembly());
         }
 
-        public enum MechState
+        private enum MechState
         {
             Active,
             Readying,
         }
 
-        internal static float CalculateCBillValue(MechDef mech)
+        private static float CalculateCBillValue(MechDef mech)
         {
-            var currentCBillValue = 0f;
-            var num = 10000f;
-            currentCBillValue = (float) mech.Chassis.Description.Cost;
-            var num2 = 0f;
-            num2 += mech.Head.CurrentArmor;
-            num2 += mech.CenterTorso.CurrentArmor;
-            num2 += mech.CenterTorso.CurrentRearArmor;
-            num2 += mech.LeftTorso.CurrentArmor;
-            num2 += mech.LeftTorso.CurrentRearArmor;
-            num2 += mech.RightTorso.CurrentArmor;
-            num2 += mech.RightTorso.CurrentRearArmor;
-            num2 += mech.LeftArm.CurrentArmor;
-            num2 += mech.RightArm.CurrentArmor;
-            num2 += mech.LeftLeg.CurrentArmor;
-            num2 += mech.RightLeg.CurrentArmor;
-            num2 *= UnityGameInstance.BattleTechGame.MechStatisticsConstants.CBILLS_PER_ARMOR_POINT;
-            currentCBillValue += num2;
+            const float num = 10000f;
+            var currentCBillValue = (float) mech.Chassis.Description.Cost;
+            var armorValues = new[]
+            {
+                mech.Head.CurrentArmor,
+                mech.CenterTorso.CurrentArmor,
+                mech.CenterTorso.CurrentRearArmor,
+                mech.LeftTorso.CurrentArmor,
+                mech.LeftTorso.CurrentRearArmor,
+                mech.RightTorso.CurrentArmor,
+                mech.RightTorso.CurrentRearArmor,
+                mech.LeftArm.CurrentArmor,
+                mech.RightArm.CurrentArmor,
+                mech.LeftLeg.CurrentArmor,
+                mech.RightLeg.CurrentArmor
+            };
+            currentCBillValue += armorValues.Sum() * UnityGameInstance.BattleTechGame.MechStatisticsConstants.CBILLS_PER_ARMOR_POINT;
             currentCBillValue += mech.Inventory.Sum(mechComponentRef => (float) mechComponentRef.Def.Description.Cost);
             currentCBillValue = Mathf.Round(currentCBillValue / num) * num;
             return currentCBillValue;
         }
 
-        internal static List<Tuple<MechState, MechDef>> SortMechDefs(Dictionary<int, Tuple<MechState, MechDef>> mechs)
+        private static bool isSortEnabled = true;
+
+        public static void DisableSort() { isSortEnabled = false; }
+        public static void EnableSort() { isSortEnabled = true; }
+
+        private static List<Tuple<MechState, MechDef>> SortMechDefs(Dictionary<int, Tuple<MechState, MechDef>> mechs)
         {
+            if (!isSortEnabled) return mechs.Values.ToList();
+
             if (ModSettings.OrderByNickname)
             {
                 return
@@ -97,7 +109,7 @@ namespace SortByTonnage
                     .ToList();
         }
 
-        public static Dictionary<int, Tuple<MechState, MechDef>> CombinedSlots(int mechSlots,
+        private static Dictionary<int, Tuple<MechState, MechDef>> CombinedSlots(int mechSlots,
             Dictionary<int, MechDef> active, Dictionary<int, MechDef> readying)
         {
             var combined = new Dictionary<int, Tuple<MechState, MechDef>>();
@@ -219,6 +231,7 @@ namespace SortByTonnage
         }
     }
 
+    // ReadyMech is the function called when one readies a mech from the stored mechs
     [HarmonyPatch(typeof(SimGameState), "ReadyMech")]
     public static class SimGameState_ReadyMech_Patch
     {
@@ -229,6 +242,8 @@ namespace SortByTonnage
         }
     }
 
+    // AFAICT this is never called by anything, so it probably isn't necessary,
+    // but completeness
     [HarmonyPatch(typeof(SimGameState), "RemoveMech")]
     public static class SimGameState_RemoveMech_Patch
     {
@@ -239,6 +254,8 @@ namespace SortByTonnage
         }
     }
 
+    // ScrapActiveMech is called when the scrap button is clicked on the selected
+    // mech in the mech bay
     [HarmonyPatch(typeof(SimGameState), "ScrapActiveMech")]
     public static class SimGameState_ScrapActiveMech_Patch
     {
@@ -249,6 +266,9 @@ namespace SortByTonnage
         }
     }
 
+    // ScrapInactiveMech is called by ReadyMech to remove placeholder,
+    // by scrapping chassis in the storage, and when scrapping a mech
+    // to make room for another one upon salvaged mech completion.
     [HarmonyPatch(typeof(SimGameState), "ScrapInactiveMech")]
     public static class SimGameState_ScrapInativeMech_Patch
     {
@@ -259,6 +279,7 @@ namespace SortByTonnage
         }
     }
 
+    // Called when the strip button is clicked on an active mech.
     [HarmonyPatch(typeof(SimGameState), "StripMech")]
     public static class SimGameState_StripMech_Patch
     {
@@ -269,6 +290,8 @@ namespace SortByTonnage
         }
     }
 
+    // Called when a readying mech is canceled before it's readied, 
+    // including mech being worked on.
     [HarmonyPatch(typeof(SimGameState), "UnreadyMech")]
     public static class SimGameState_UnreadyMech_Patch
     {
@@ -279,6 +302,8 @@ namespace SortByTonnage
         }
     }
 
+    // This is what happens when the mech lab finishes a mech work order as part of
+    // a timeline event *I think*.
     [HarmonyPatch(typeof(SimGameState), "ML_ReadyMech")]
     public static class SimGamestate_ML_ReadyMech_Patch
     {
@@ -300,6 +325,8 @@ namespace SortByTonnage
         }
     }
 
+    // The actual thing when you cancel a ready mech job?
+    // we override it because the original stuff uses bay index which we can't rely on
     [HarmonyPatch(typeof(SimGameState), "Cancel_ML_ReadyMech", new Type[] {typeof(WorkOrderEntry_ReadyMech)})]
     public static class SimGamestate_Cancel_ML_ReadyMech_Patch
     {
@@ -322,6 +349,7 @@ namespace SortByTonnage
         }
     }
 
+    // happens when you leave the mech lab for any reason
     [HarmonyPatch(typeof(MechBayPanel), "OnMechLabClosed")]
     public static class MechBayPanel_OnMechLabClosed_Patch
     {
@@ -332,6 +360,63 @@ namespace SortByTonnage
             {
                 return;
             }
+            SortMechsByTonnage(__instance.Sim.GetMaxActiveMechs(), __instance.Sim.ActiveMechs, __instance.Sim.ReadyingMechs);
+        }
+    }
+
+    // when your mech bays are full and you salvage, you get placement popup
+    // which has a completely different set of rules around 
+    // things that the other methods, so we have to handle it separately
+    // this handles removing a mech that is in readying and gets kicked
+    [HarmonyPatch(typeof(MechPlacementPopup), "ConfirmCancelWorkOrder")]
+    public static class MechPlacementPopup_ConfirmCancelWorkOrder_Patch
+    {
+        static void Prefix()
+        {
+            DisableSort();
+        }
+
+        static void Postfix(MechPlacementPopup __instance)
+        {
+            EnableSort();
+            SortMechsByTonnage(__instance.Sim.GetMaxActiveMechs(), __instance.Sim.ActiveMechs, __instance.Sim.ReadyingMechs);
+        }
+    }
+
+    // when your mech bays are full and you salvage, you get placement popup
+    // which has a completely different set of rules around 
+    // things that the other methods, so we have to handle it separately
+    // this handles scapping a mech
+    [HarmonyPatch(typeof(MechPlacementPopup), "ConfirmScrapMech")]
+    public static class MechPlacementPopup_ConfirmScrapMech_Patch
+    {
+        static void Prefix()
+        {
+            DisableSort();
+        }
+
+        static void Postfix(MechPlacementPopup __instance)
+        {
+            EnableSort();
+            SortMechsByTonnage(__instance.Sim.GetMaxActiveMechs(), __instance.Sim.ActiveMechs, __instance.Sim.ReadyingMechs);
+        }
+    }
+
+    // when your mech bays are full and you salvage, you get placement popup
+    // which has a completely different set of rules around 
+    // things that the other methods, so we have to handle it separately
+    // this handles scapping a mech
+    [HarmonyPatch(typeof(MechPlacementPopup), "OnConfirmClicked")]
+    public static class MechPlacementPopup_OnConfirmClicked_Patch
+    {
+        static void Prefix()
+        {
+            DisableSort();
+        }
+
+        static void Postfix(MechPlacementPopup __instance)
+        {
+            EnableSort();
             SortMechsByTonnage(__instance.Sim.GetMaxActiveMechs(), __instance.Sim.ActiveMechs, __instance.Sim.ReadyingMechs);
         }
     }
