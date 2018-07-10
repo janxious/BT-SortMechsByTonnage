@@ -212,6 +212,7 @@ namespace SortByTonnage
         }
     }
 
+    // AddMech happens when you are given a mech via salvage, and via milestone rewards
     [HarmonyPatch(typeof(SimGameState), "AddMech")]
     public static class SimGameState_AddMech_Patch
     {
