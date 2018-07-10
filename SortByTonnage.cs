@@ -68,45 +68,72 @@ namespace SortByTonnage
             return currentCBillValue;
         }
 
-        private static bool isSortEnabled = true;
+        private static bool _isSortEnabled = true;
 
-        public static void DisableSort() { isSortEnabled = false; }
-        public static void EnableSort() { isSortEnabled = true; }
+        public static void DisableSort() { _isSortEnabled = false; }
+        public static void EnableSort() { _isSortEnabled = true; }
 
         private static List<Tuple<MechState, MechDef>> SortMechDefs(Dictionary<int, Tuple<MechState, MechDef>> mechs)
         {
-            if (!isSortEnabled) return mechs.Values.ToList();
-
-            if (ModSettings.OrderByNickname)
+            try
             {
+                Logger.Debug($"pre-sort count: {mechs.Count}");
+
+                for (var i = 0; i < mechs.Count; i++)
+                {
+                    if (mechs.ContainsKey(i))
+                    {
+                        if (mechs[i].Item1 == MechState.Active)
+                        {
+                            Logger.Debug($"found active {i} : {mechs[i].Item2.Name}");
+                        }
+                        else if (mechs[i].Item1 == MechState.Readying)
+                        {
+                            Logger.Debug($"found readying {i} : {mechs[i].Item2.Name}");
+                        }
+                    }
+                    else
+                    {
+                        Logger.Debug($"key {i} not found");
+                    }
+                }
+
+                if (ModSettings.OrderByNickname)
+                {
+                    return
+                        mechs
+                            .Values
+                            .OrderBy(mech => mech.Item2.Name)
+                            .ThenBy(mech => mech.Item2.Chassis.Tonnage)
+                            .ThenBy(mech => mech.Item2.Chassis.VariantName)
+                            .ToList();
+                }
+
+                if (ModSettings.OrderByCbillValue)
+                {
+                    return
+                        mechs
+                            .Values
+                            .OrderByDescending(mech => CalculateCBillValue(mech.Item2))
+                            .ThenBy(mech => mech.Item2.Chassis.Tonnage)
+                            .ThenBy(mech => mech.Item2.Chassis.VariantName)
+                            .ThenBy(mech => mech.Item2.Name)
+                            .ToList();
+                }
+
                 return
                     mechs
                         .Values
-                        .OrderBy(mech => mech.Item2.Name)
-                        .ThenBy(mech => mech.Item2.Chassis.Tonnage)
-                        .ThenBy(mech => mech.Item2.Chassis.VariantName)
-                        .ToList();
-            }
-
-            if (ModSettings.OrderByCbillValue)
-            {
-                return
-                    mechs
-                        .Values
-                        .OrderByDescending(mech => CalculateCBillValue(mech.Item2))
-                        .ThenBy(mech => mech.Item2.Chassis.Tonnage)
+                        .OrderByDescending(mech => mech.Item2.Chassis.Tonnage)
                         .ThenBy(mech => mech.Item2.Chassis.VariantName)
                         .ThenBy(mech => mech.Item2.Name)
                         .ToList();
             }
-
-            return
-                mechs
-                    .Values
-                    .OrderByDescending(mech => mech.Item2.Chassis.Tonnage)
-                    .ThenBy(mech => mech.Item2.Chassis.VariantName)
-                    .ThenBy(mech => mech.Item2.Name)
-                    .ToList();
+            catch (Exception e)
+            {
+                Logger.Error(e);
+                return mechs.Values.ToList();
+            }
         }
 
         private static Dictionary<int, Tuple<MechState, MechDef>> CombinedSlots(int mechSlots,
@@ -135,6 +162,12 @@ namespace SortByTonnage
         public static void SortMechsByTonnage(int mechSlots, Dictionary<int, MechDef> activeMechs,
             Dictionary<int, MechDef> readyingMechs)
         {
+            if (!_isSortEnabled)
+            {
+                Logger.Debug("sorting disabled");
+                return;
+            }
+
             var sortedMechs = SortMechDefs(CombinedSlots(mechSlots, activeMechs, readyingMechs));
             Logger.Debug($"sortedMechs #: {sortedMechs.Count}");
             for (var ii = 0; ii < sortedMechs.Count; ii++)
@@ -235,9 +268,15 @@ namespace SortByTonnage
     [HarmonyPatch(typeof(SimGameState), "ReadyMech")]
     public static class SimGameState_ReadyMech_Patch
     {
+        static void Prefix()
+        {
+            Logger.Debug("ReadyMech Prefix Patch Installed");
+            DisableSort();
+        }
         static void Postfix(int baySlot, string id, SimGameState __instance)
         {
-            Logger.Debug("ReadyMech Patch Installed");
+            Logger.Debug("ReadyMech Postfix Patch Installed");
+            EnableSort();
             SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
         }
     }
@@ -274,7 +313,7 @@ namespace SortByTonnage
     {
         static void Postfix(string id, bool pay, SimGameState __instance)
         {
-            Logger.Debug("ScrapInctiveMech Patch Installed");
+            Logger.Debug("ScrapInactiveMech Patch Installed");
             SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
         }
     }

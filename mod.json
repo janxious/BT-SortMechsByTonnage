@@ -2,7 +2,7 @@
   "Name": "SortByTonnage",
   "Enabled": true,
 
-  "Version": "0.3.0",
+  "Version": "0.4.0",
 
   "Author": "janxious",
   "Website": "https://github.com/janxious/SortByTonnage",
@@ -13,7 +13,7 @@
   "ConflictsWith": [],
 
   "Settings": {
-    "debug": true,
+    "debug": false,
     "orderByCbillValue": false,
     "orderByNickname": false
   }
