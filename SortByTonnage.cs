@@ -9,8 +9,6 @@ using Newtonsoft.Json;
 using UnityEngine;
 using static SortByTonnage.SortByTonnage;
 
-// TODO: Deal with MechPlacementPopup's bay management.
-
 namespace SortByTonnage
 {
     public static class SortByTonnage
@@ -159,7 +157,7 @@ namespace SortByTonnage
             return combined;
         }
 
-        public static void SortMechsByTonnage(int mechSlots, Dictionary<int, MechDef> activeMechs,
+        public static void SortMechLabMechs(int mechSlots, Dictionary<int, MechDef> activeMechs,
             Dictionary<int, MechDef> readyingMechs)
         {
             if (!_isSortEnabled)
@@ -245,7 +243,7 @@ namespace SortByTonnage
                         if (firstFreeMechBay >= 0)
                         {
                             __instance.ActiveMechs[firstFreeMechBay] = mech;    
-                            SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs,
+                            SortMechLabMechs(__instance.GetMaxActiveMechs(), __instance.ActiveMechs,
                                 __instance.ReadyingMechs);
                         }
                         else
@@ -261,7 +259,7 @@ namespace SortByTonnage
             string mechAddedHeader, SimGameState __instance)
         {
             Logger.Debug("AddMech Postfix Patch Installed");
-            SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
+            SortMechLabMechs(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
         }
     }
 
@@ -278,7 +276,7 @@ namespace SortByTonnage
         {
             Logger.Debug("ReadyMech Postfix Patch Installed");
             EnableSort();
-            SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
+            SortMechLabMechs(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
         }
     }
 
@@ -290,7 +288,7 @@ namespace SortByTonnage
         static void Postfix(int idx, MechDef mech, bool active, SimGameState __instance)
         {
             Logger.Debug("RemoveMech Patch Installed");
-            SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
+            SortMechLabMechs(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
         }
     }
 
@@ -302,7 +300,7 @@ namespace SortByTonnage
         static void Postfix(int baySlot, MechDef def, SimGameState __instance)
         {
             Logger.Debug("ScrapActiveMech Patch Installed");
-            SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
+            SortMechLabMechs(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
         }
     }
 
@@ -315,7 +313,7 @@ namespace SortByTonnage
         static void Postfix(string id, bool pay, SimGameState __instance)
         {
             Logger.Debug("ScrapInactiveMech Patch Installed");
-            SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
+            SortMechLabMechs(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
         }
     }
 
@@ -326,7 +324,7 @@ namespace SortByTonnage
         static void Postfix(int baySlot, MechDef def, SimGameState __instance)
         {
             Logger.Debug("StripMech Patch Installed");
-            SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
+            SortMechLabMechs(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
         }
     }
 
@@ -338,7 +336,7 @@ namespace SortByTonnage
         static void Postfix(int baySlot, MechDef def, SimGameState __instance)
         {
             Logger.Debug("UnreadyMech Patch Installed");
-            SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
+            SortMechLabMechs(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
         }
     }
 
@@ -360,7 +358,7 @@ namespace SortByTonnage
             __instance.ActiveMechs[index] = order.Mech;
             order.Mech.RefreshBattleValue();
             order.SetMechLabComplete(true);
-            SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
+            SortMechLabMechs(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
             return false;
         }
     }
@@ -384,7 +382,7 @@ namespace SortByTonnage
             Logger.Debug($"cancel index: {index}\nmech? {item.Value.GUID} : {order.Mech.GUID} : {order.Mech.Chassis.VariantName}");
             __instance.UnreadyMech(index, order.Mech);
             __instance.ReadyingMechs.Remove(index);
-            SortMechsByTonnage(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
+            SortMechLabMechs(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
             return false;
         }
     }
@@ -400,7 +398,7 @@ namespace SortByTonnage
             {
                 return;
             }
-            SortMechsByTonnage(__instance.Sim.GetMaxActiveMechs(), __instance.Sim.ActiveMechs, __instance.Sim.ReadyingMechs);
+            SortMechLabMechs(__instance.Sim.GetMaxActiveMechs(), __instance.Sim.ActiveMechs, __instance.Sim.ReadyingMechs);
         }
     }
 
@@ -419,7 +417,7 @@ namespace SortByTonnage
         static void Postfix(MechPlacementPopup __instance)
         {
             EnableSort();
-            SortMechsByTonnage(__instance.Sim.GetMaxActiveMechs(), __instance.Sim.ActiveMechs, __instance.Sim.ReadyingMechs);
+            SortMechLabMechs(__instance.Sim.GetMaxActiveMechs(), __instance.Sim.ActiveMechs, __instance.Sim.ReadyingMechs);
         }
     }
 
@@ -438,7 +436,7 @@ namespace SortByTonnage
         static void Postfix(MechPlacementPopup __instance)
         {
             EnableSort();
-            SortMechsByTonnage(__instance.Sim.GetMaxActiveMechs(), __instance.Sim.ActiveMechs, __instance.Sim.ReadyingMechs);
+            SortMechLabMechs(__instance.Sim.GetMaxActiveMechs(), __instance.Sim.ActiveMechs, __instance.Sim.ReadyingMechs);
         }
     }
 
@@ -457,7 +455,7 @@ namespace SortByTonnage
         static void Postfix(MechPlacementPopup __instance)
         {
             EnableSort();
-            SortMechsByTonnage(__instance.Sim.GetMaxActiveMechs(), __instance.Sim.ActiveMechs, __instance.Sim.ReadyingMechs);
+            SortMechLabMechs(__instance.Sim.GetMaxActiveMechs(), __instance.Sim.ActiveMechs, __instance.Sim.ReadyingMechs);
         }
     }
 }

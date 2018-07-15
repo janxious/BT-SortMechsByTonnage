@@ -13,8 +13,9 @@
   "ConflictsWith": [],
 
   "Settings": {
-    "debug": false,
     "orderByCbillValue": false,
-    "orderByNickname": false
+    "orderByNickname": false,
+    
+    "debug": false
   }
 }
