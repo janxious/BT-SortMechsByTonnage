@@ -69,7 +69,49 @@ namespace SortByTonnage
         private static bool _isSortEnabled = true;
 
         public static void DisableSort() { _isSortEnabled = false; }
-        public static void EnableSort() { _isSortEnabled = true; }
+        public static void EnableSort()  { _isSortEnabled = true; }
+
+        private static List<IMechLabDraggableItem> SortMechDefs(List<IMechLabDraggableItem> mechs)
+        {
+            try
+            {
+                Logger.Debug($"pre-sort count: {mechs.Count}");
+
+                if (ModSettings.OrderByNickname)
+                {
+                    return
+                        mechs
+                            .OrderByDescending(mech => mech.MechDef.Name)
+                            .ThenBy(mech => mech.MechDef.Chassis.Tonnage)
+                            .ThenBy(mech => mech.MechDef.Chassis.VariantName)
+                            .ToList();
+                }
+
+                if (ModSettings.OrderByCbillValue)
+                {
+                    return
+                        mechs
+                            .OrderBy(mech => CalculateCBillValue(mech.MechDef))
+                            .ThenBy(mech => mech.MechDef.Chassis.Tonnage)
+                            .ThenBy(mech => mech.MechDef.Chassis.VariantName)
+                            .ThenBy(mech => mech.MechDef.Name)
+                            .ToList();
+                }
+
+                return
+                    mechs
+                        .OrderBy(mech => mech.MechDef.Chassis.Tonnage)
+                        .ThenBy(mech => mech.MechDef.Chassis.VariantName)
+                        .ThenBy(mech => mech.MechDef.Name)
+                        .ToList();
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e);
+                return mechs;
+            }
+
+        }
 
         private static List<Tuple<MechState, MechDef>> SortMechDefs(Dictionary<int, Tuple<MechState, MechDef>> mechs)
         {
@@ -157,6 +199,17 @@ namespace SortByTonnage
             return combined;
         }
 
+        public static List<IMechLabDraggableItem> SortStorageWidgetMechs(List<IMechLabDraggableItem> mechs)
+        {
+            if (!_isSortEnabled)
+            {
+                Logger.Debug("sorting disabled");
+                return mechs;
+            }
+
+            return SortMechDefs(mechs);
+        }
+
         public static void SortMechLabMechs(int mechSlots, Dictionary<int, MechDef> activeMechs,
             Dictionary<int, MechDef> readyingMechs)
         {
@@ -207,6 +260,19 @@ namespace SortByTonnage
                     }
                 }
             }
+        }
+    }
+
+    // This is the entry point for sorting mechs in the lance configuration
+    // screen (prep for combat drop)
+    [HarmonyPatch(typeof(MechBayMechStorageWidget), "SetSorting")]
+    public static class MechBayMechStorageWidget_SetSorting_Patch
+    {
+        static bool Prefix(string sortOption, MechBayMechStorageWidget __instance)
+        {
+            __instance.inventory = SortStorageWidgetMechs(__instance.inventory);
+            Traverse.Create(__instance).Method("ApplySort").GetValue();
+            return false;
         }
     }
 
