@@ -276,6 +276,23 @@ namespace SortByTonnage
         }
     }
 
+    // _OnDefsLoadComplete happens when you are loading a game from disk/starting a new game/etc.
+    [HarmonyPatch(typeof(SimGameState), "_OnDefsLoadComplete")]
+    public static class SimGameState__OnDefsLoadComplete_Patch
+    {
+        static void Prefix()
+        {
+            Logger.Debug("_OnDefsLoadComplete Prefix Patch Installed");
+            DisableSort();
+        }
+        static void Postfix(SimGameState __instance)
+        {
+            Logger.Debug("_OnDefsLoadComplete Postfix Patch Installed");
+            EnableSort();
+            SortMechLabMechs(__instance.GetMaxActiveMechs(), __instance.ActiveMechs, __instance.ReadyingMechs);
+        }
+    }
+
     // AddMech happens when you are given a mech via salvage, and via milestone rewards
     [HarmonyPatch(typeof(SimGameState), "AddMech")]
     public static class SimGameState_AddMech_Patch
