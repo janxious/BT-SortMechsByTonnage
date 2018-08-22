@@ -93,7 +93,7 @@ namespace SortByTonnage
                         mechs
                             .OrderBy(mech => CalculateCBillValue(mech.MechDef))
                             .ThenBy(mech => mech.MechDef.Chassis.Tonnage)
-                            .ThenBy(mech => mech.MechDef.Chassis.VariantName)
+                            .ThenByDescending(mech => mech.MechDef.Chassis.VariantName)
                             .ThenBy(mech => mech.MechDef.Name)
                             .ToList();
                 }
@@ -101,8 +101,8 @@ namespace SortByTonnage
                 return
                     mechs
                         .OrderBy(mech => mech.MechDef.Chassis.Tonnage)
-                        .ThenBy(mech => mech.MechDef.Chassis.VariantName)
-                        .ThenBy(mech => mech.MechDef.Name)
+                        .ThenByDescending(mech => mech.MechDef.Chassis.VariantName)
+                        .ThenByDescending(mech => mech.MechDef.Name)
                         .ToList();
             }
             catch (Exception e)
