@@ -268,7 +268,7 @@ namespace SortByTonnage
     [HarmonyPatch(typeof(MechBayMechStorageWidget), "SetSorting")]
     public static class MechBayMechStorageWidget_SetSorting_Patch
     {
-        static bool Prefix(string sortOption, MechBayMechStorageWidget __instance)
+        static bool Prefix(MechBayMechStorageWidget __instance)
         {
             __instance.inventory = SortStorageWidgetMechs(__instance.inventory);
             Traverse.Create(__instance).Method("ApplySort").GetValue();
